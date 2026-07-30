@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 import { Bell, Search, Download, Upload, Plus, Edit2, Trash2, Paperclip, X } from "lucide-react";
 import { useData } from "../../../lib/DataContext";
 import { Card, Btn, Input, Select, TextArea, Badge, Modal, CopyableCell, SortableTh } from "../../../components/ui";
-import { fmtDate, buildReminders, sortRows, excelToISODate, daysBetween, todayISO } from "../../../lib/helpers";
+import { fmtDate, fmtMoney, buildReminders, sortRows, excelToISODate, daysBetween, todayISO } from "../../../lib/helpers";
 import { IMPORTANT_DATE_TYPES } from "../../../lib/constants";
 
 const emptyClient = () => ({
@@ -338,6 +338,27 @@ export default function ClientsPage() {
                 </div>
               </div>
             )}
+            {(() => {
+              const clientPayments = data.custody.filter((c) => c.type === "دفع" && c.client_id === viewClient.id);
+              const total = clientPayments.reduce((s, c) => s + Number(c.amount), 0);
+              if (clientPayments.length === 0) return null;
+              return (
+                <div className="col-span-2 pt-2">
+                  <span className="text-slate-500 block mb-2">مدفوعات من العهدة لهذا العميل — إجمالي {fmtMoney(total)}</span>
+                  <div className="flex flex-col gap-1.5">
+                    {[...clientPayments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p) => (
+                      <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
+                        <span>{p.user_name}{p.note ? ` — ${p.note}` : ""}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-slate-500">{fmtDate(p.date)}</span>
+                          <span className="font-semibold">{fmtMoney(p.amount)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             {(viewClient.attachments || []).length > 0 && (
               <div className="col-span-2 pt-2">
                 <span className="text-slate-500 block mb-1">المرفقات</span>

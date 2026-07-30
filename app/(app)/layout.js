@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Wallet, BarChart3, ClipboardCheck, ListTodo, CalendarDays,
-  Settings as SettingsIcon, Sun, Moon, LogOut, Menu,
+  Settings as SettingsIcon, Sun, Moon, LogOut, Menu, HandCoins,
 } from "lucide-react";
 import { useAuth } from "../../lib/AuthContext";
 import { DataProvider, useData } from "../../lib/DataContext";
@@ -12,7 +12,7 @@ import { buildReminders } from "../../lib/helpers";
 
 const ICONS = {
   dashboard: LayoutDashboard, clients: Users, invoices: FileText, expenses: Wallet,
-  reports: BarChart3, declarations: ClipboardCheck, tasks: ListTodo, leaves: CalendarDays, settings: SettingsIcon,
+  reports: BarChart3, declarations: ClipboardCheck, tasks: ListTodo, leaves: CalendarDays, custody: HandCoins, settings: SettingsIcon,
 };
 
 function Shell({ children }) {
