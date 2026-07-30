@@ -1,15 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, MapPin, Lock, Building2, Info, MessageCircle, Home, LogIn, Mail, Clock, Briefcase, Wrench } from "lucide-react";
+import {
+  Phone, MapPin, Lock, Building2, Info, MessageCircle, Home, LogIn, Mail, Clock, Briefcase, Wrench,
+  Sparkles, ArrowLeft, ArrowRight, RotateCcw, CheckCircle2,
+} from "lucide-react";
 import { useAuth } from "../../lib/AuthContext";
 import { supabase } from "../../lib/supabaseClient";
-import { defaultRouteForRole, DEFAULT_PUBLIC_PAGE } from "../../lib/constants";
+import { defaultRouteForRole, DEFAULT_PUBLIC_PAGE, EGYPT_GOVERNORATES } from "../../lib/constants";
 
 const TABS = [
   { key: "home", label: "الرئيسية", icon: Home },
   { key: "services", label: "خدمات مكتبنا", icon: Wrench },
-  { key: "company-types", label: "أنواع الشركات", icon: Building2 },
+  { key: "company-types", label: "تأسيس الشركات", icon: Building2 },
   { key: "about", label: "عن المكتب", icon: Info },
   { key: "contact", label: "تواصل معنا", icon: MessageCircle },
   { key: "login", label: "تسجيل الدخول", icon: LogIn },
@@ -73,6 +76,204 @@ function LoginForm() {
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+// خيار زر إجابة (نعم/لا أو اختيار من عدة بدائل) داخل معالج ترشيح نوع الشركة
+function WizardChoice({ options, onPick }) {
+  return (
+    <div className="flex flex-col gap-2 mt-4">
+      {options.map((o) => (
+        <button key={o.label} onClick={() => onPick(o.value)}
+          className="text-right bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold/60 rounded-xl px-4 py-3 text-sm text-slate-200 transition-colors">
+          {o.label}
+          {o.hint && <span className="block text-xs text-slate-400 mt-0.5">{o.hint}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// معالج بيسأل أسئلة بسيطة عن الشركة اللي عايز تؤسسها، وبيرشح نوع الشركة القانوني الأنسب بناءً على الإجابات
+function CompanyTypeWizard({ companyTypes }) {
+  const emptyAnswers = { companyName: "", activity: "", governorate: "", phone: "" };
+  const [step, setStep] = useState(0); // 0 = بيانات أساسية، 1..n = أسئلة الترشيح
+  const [info, setInfo] = useState(emptyAnswers);
+  const [result, setResult] = useState(null);
+
+  const restart = () => { setStep(0); setInfo(emptyAnswers); setResult(null); };
+
+  const finish = (typeName) => setResult(typeName);
+
+  if (result) {
+    const typeInfo = companyTypes.find((c) => c.name === result);
+    return (
+      <div className="bg-white/5 border border-gold/30 rounded-xl p-5">
+        <div className="flex items-center gap-2 text-gold mb-2">
+          <CheckCircle2 size={18} />
+          <span className="font-bold text-sm">الشكل القانوني المقترح لشركتك</span>
+        </div>
+        <h3 className="text-white font-black text-lg mb-2">{result}</h3>
+        {typeInfo?.desc && <p className="text-slate-300 text-sm leading-6 mb-4">{typeInfo.desc}</p>}
+        {(info.companyName || info.activity || info.governorate) && (
+          <div className="bg-white/5 rounded-lg p-3 mb-4 text-xs text-slate-400 flex flex-col gap-1">
+            {info.companyName && <span>اسم الشركة المقترح: <span className="text-slate-200">{info.companyName}</span></span>}
+            {info.activity && <span>النشاط: <span className="text-slate-200">{info.activity}</span></span>}
+            {info.governorate && <span>المحافظة: <span className="text-slate-200">{info.governorate}</span></span>}
+          </div>
+        )}
+        <p className="text-slate-400 text-xs leading-6 mb-4">
+          الترشيح ده استرشادي بناءً على إجاباتك، والتفاصيل والإجراءات النهائية بتتحدد بعد استشارة مباشرة مع المكتب.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={restart} className="flex items-center gap-1.5 text-xs font-medium bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg px-3.5 py-2">
+            <RotateCcw size={13} /> إعادة الأسئلة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // خطوة 0: بيانات أساسية عن الشركة المطلوب تأسيسها (اختيارية، لغرض المتابعة معاك)
+  if (step === 0) {
+    return (
+      <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+        <div className="flex items-center gap-2 text-gold mb-1">
+          <Sparkles size={18} />
+          <span className="font-bold text-sm">مساعد ترشيح نوع الشركة</span>
+        </div>
+        <p className="text-slate-400 text-xs mb-4">جاوب على كام سؤال بسيط ونرشحلك الشكل القانوني الأنسب لشركتك.</p>
+        <div className="flex flex-col gap-3">
+          <input value={info.companyName} onChange={(e) => setInfo({ ...info, companyName: e.target.value })}
+            placeholder="اسم الشركة المقترح (اختياري)"
+            className="text-sm px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold" />
+          <input value={info.activity} onChange={(e) => setInfo({ ...info, activity: e.target.value })}
+            placeholder="نشاط الشركة (مثال: تجارة، مقاولات، برمجيات...)"
+            className="text-sm px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold" />
+          <select value={info.governorate} onChange={(e) => setInfo({ ...info, governorate: e.target.value })}
+            className="text-sm px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-gold">
+            <option value="" className="text-slate-800">المحافظة (اختياري)</option>
+            {EGYPT_GOVERNORATES.map((g) => <option key={g} value={g} className="text-slate-800">{g}</option>)}
+          </select>
+          <input value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })}
+            placeholder="رقم للتواصل معاك (اختياري)" dir="ltr"
+            className="text-sm px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold" />
+          <button onClick={() => setStep(1)}
+            className="flex items-center justify-center gap-1.5 text-sm font-medium bg-gold hover:brightness-90 text-navyDark rounded-lg py-2.5 mt-1">
+            ابدأ الأسئلة <ArrowLeft size={15} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // خطوة 1: فرع لشركة أجنبية؟
+  if (step === 1) {
+    return (
+      <WizardStep title="هل الشركة دي فرع لشركة أم مسجّلة برّه مصر؟" step={step} onBack={() => setStep(0)}>
+        <WizardChoice
+          options={[
+            { label: "نعم، فرع لشركة أجنبية", value: true },
+            { label: "لا، شركة جديدة بالكامل داخل مصر", value: false },
+          ]}
+          onPick={(v) => (v ? finish("فرع شركة أجنبية") : setStep(2))}
+        />
+      </WizardStep>
+    );
+  }
+
+  // خطوة 2: عدد الشركاء
+  if (step === 2) {
+    return (
+      <WizardStep title="كام شخص هيشارك في ملكية الشركة (المؤسس/الشركاء)؟" step={step} onBack={() => setStep(1)}>
+        <WizardChoice
+          options={[
+            { label: "شخص واحد فقط", value: "one" },
+            { label: "من 2 إلى 50 شريك", value: "few" },
+            { label: "أكثر من 50، أو عايز أطرح أسهم الشركة للجمهور مستقبلًا", value: "many" },
+          ]}
+          onPick={(v) => {
+            if (v === "many") finish("شركة مساهمة");
+            else if (v === "one") setStep(3);
+            else setStep(4);
+          }}
+        />
+      </WizardStep>
+    );
+  }
+
+  // خطوة 3 (شخص واحد): مسؤولية محدودة؟
+  if (step === 3) {
+    return (
+      <WizardStep title="عايز مسؤوليتك المالية تكون محدودة برأس مال الشركة بس (متضمنش أموالك الشخصية)؟" step={step} onBack={() => setStep(2)}>
+        <WizardChoice
+          options={[
+            { label: "نعم، عايز أحمي أموالي الشخصية", value: true },
+            { label: "لا، مش فارق معايا", value: false },
+          ]}
+          onPick={(v) => finish(v ? "شركة الشخص الواحد" : "منشأة فردية")}
+        />
+      </WizardStep>
+    );
+  }
+
+  // خطوة 4 (شركاء): طرح أسهم؟
+  if (step === 4) {
+    return (
+      <WizardStep title="عايزين شكل يسهّل بيع/تداول حصص الشركة كأسهم؟" step={step} onBack={() => setStep(2)}>
+        <WizardChoice
+          options={[
+            { label: "نعم", value: true },
+            { label: "لا", value: false },
+          ]}
+          onPick={(v) => (v ? finish("شركة مساهمة") : setStep(5))}
+        />
+      </WizardStep>
+    );
+  }
+
+  // خطوة 5 (شركاء): مسؤولية محدودة؟
+  if (step === 5) {
+    return (
+      <WizardStep title="عايزين مسؤولية كل شريك تكون محدودة بقدر حصته في رأس المال بس؟" step={step} onBack={() => setStep(4)}>
+        <WizardChoice
+          options={[
+            { label: "نعم", value: true },
+            { label: "لا، مش شرط", value: false },
+          ]}
+          onPick={(v) => (v ? finish("شركة ذات مسئولية محدودة") : setStep(6))}
+        />
+      </WizardStep>
+    );
+  }
+
+  // خطوة 6 (شركاء): يوجد شريك موصٍ (بيشارك بالمال بس مش هيدير)؟
+  if (step === 6) {
+    return (
+      <WizardStep title="في حد من الشركاء هيشارك بالمال بس مش هيشارك في إدارة الشركة؟" step={step} onBack={() => setStep(5)}>
+        <WizardChoice
+          options={[
+            { label: "نعم", value: true },
+            { label: "لا، كل الشركاء هيديروا الشركة سوا", value: false },
+          ]}
+          onPick={(v) => finish(v ? "شركة توصية بسيطة" : "شركة تضامن")}
+        />
+      </WizardStep>
+    );
+  }
+
+  return null;
+}
+
+function WizardStep({ title, onBack, children }) {
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+      <button onClick={onBack} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 mb-3">
+        <ArrowRight size={13} /> رجوع
+      </button>
+      <h3 className="text-white font-bold text-sm leading-6">{title}</h3>
+      {children}
     </div>
   );
 }
@@ -172,8 +373,14 @@ export default function LoginPage() {
 
         {tab === "company-types" && (
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-1">أنواع الشركات</h2>
-            <p className="text-slate-400 text-sm mb-6">نظرة سريعة على الأشكال القانونية الأكثر شيوعًا لتأسيس الشركات في مصر.</p>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-1">تأسيس الشركات</h2>
+            <p className="text-slate-400 text-sm mb-6">جاوب على كام سؤال بسيط ونرشحلك الشكل القانوني الأنسب لشركتك، أو تصفح الأشكال القانونية الأكثر شيوعًا لتأسيس الشركات في مصر.</p>
+
+            <div className="mb-8">
+              <CompanyTypeWizard companyTypes={companyTypes} />
+            </div>
+
+            <h3 className="text-white font-bold text-sm mb-3">كل الأشكال القانونية</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               {companyTypes.map((c) => (
                 <div key={c.name} className="bg-white/5 border border-white/10 rounded-xl p-4">
