@@ -7,8 +7,9 @@ import { Card, Btn, Input, TextArea, Select, Badge, Modal } from "../../../compo
 import { fmtDate, fmtMoney, todayISO } from "../../../lib/helpers";
 
 // بيحسب لشخص معين: الرصيد الحالي + إجمالي المضاف/المدفوع/المُسوّى النهاردة بس
+// (حركات "تحصيل من عميل" مش جزء من عهدة الشخص الشخصية، بتتعرض في صفحة العميل نفسه بس)
 function summarizePerson(custody, userId) {
-  const rows = custody.filter((c) => c.user_id === userId);
+  const rows = custody.filter((c) => c.user_id === userId && c.type !== "تحصيل من عميل");
   const sum = (type) => rows.filter((r) => r.type === type).reduce((s, r) => s + Number(r.amount), 0);
   const added = sum("إضافة"), paid = sum("دفع"), settled = sum("تسوية");
   const balance = added - paid - settled;
@@ -142,6 +143,7 @@ export default function CustodyPage() {
           <div className="flex flex-col gap-3">
             {sortedRows.map((r) => {
               const meta = TYPE_META[r.type];
+              if (!meta) return null; // نوع حركة غير متوقع (زي حركات مرتبطة بعميل) — بيتعرض في مكانه المخصص بدل ما يكسر الصفحة
               const Icon = meta.icon;
               return (
                 <Card key={r.id} className="p-4">

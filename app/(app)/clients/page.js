@@ -335,24 +335,29 @@ export default function ClientsPage() {
             {viewClient.notes && <div className="col-span-2 pt-2"><span className="text-slate-500 block mb-1">ملاحظات</span>{viewClient.notes}</div>}
             <div className="col-span-2 pt-2">
               <span className="text-slate-500 block mb-2">تواريخ هامة</span>
-              {(viewClient.important_dates || []).length === 0 ? (
-                <p className="text-xs text-slate-400">لا يوجد تواريخ هامة مسجلة لهذا العميل.</p>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {viewClient.important_dates.map((d, idx) => {
-                    const diff = daysBetween(todayISO(), d.date);
-                    return (
-                      <div key={idx} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
-                        <span>{d.type}</span>
-                        <span className="flex items-center gap-2">
-                          <span className="text-slate-500">{fmtDate(d.date)}</span>
-                          {d.date && (diff < 0 ? <Badge color="red">متأخر {Math.abs(diff)} يوم</Badge> : diff <= 14 ? <Badge color="amber">باقي {diff} يوم</Badge> : null)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {(() => {
+                const allDates = [
+                  ...(viewClient.card_expiry_date ? [{ type: "انتهاء البطاقة الضريبية", date: viewClient.card_expiry_date }] : []),
+                  ...(viewClient.important_dates || []),
+                ];
+                if (allDates.length === 0) return <p className="text-xs text-slate-400">لا يوجد تواريخ هامة مسجلة لهذا العميل.</p>;
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    {allDates.map((d, idx) => {
+                      const diff = daysBetween(todayISO(), d.date);
+                      return (
+                        <div key={idx} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
+                          <span>{d.type}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="text-slate-500">{fmtDate(d.date)}</span>
+                            {d.date && (diff < 0 ? <Badge color="red">متأخر {Math.abs(diff)} يوم</Badge> : diff <= 14 ? <Badge color="amber">باقي {diff} يوم</Badge> : null)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
             {(() => {
               const entries = data.custody.filter((c) => (c.type === "دفع" || c.type === "تحصيل من عميل") && c.client_id === viewClient.id);
