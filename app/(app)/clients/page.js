@@ -3,6 +3,7 @@ import { useState, useMemo, useRef } from "react";
 import * as XLSX from "xlsx";
 import { Bell, Search, Download, Upload, Plus, Edit2, Trash2, Paperclip, X } from "lucide-react";
 import { useData } from "../../../lib/DataContext";
+import { useAuth } from "../../../lib/AuthContext";
 import { Card, Btn, Input, Select, TextArea, Badge, Modal, CopyableCell, SortableTh } from "../../../components/ui";
 import { fmtDate, fmtMoney, buildReminders, sortRows, excelToISODate, daysBetween, todayISO } from "../../../lib/helpers";
 import { IMPORTANT_DATE_TYPES } from "../../../lib/constants";
@@ -99,10 +100,12 @@ function ClientForm({ initial, onSave, onCancel }) {
 
 export default function ClientsPage() {
   const data = useData();
+  const { profile } = useAuth();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [modal, setModal] = useState(null);
   const [viewClient, setViewClient] = useState(null);
+  const [collectForm, setCollectForm] = useState(null); // {amount, date, note} لما يكون فورم "تحصيل من عميل" مفتوح
   const importRef = useRef();
 
   const reminders = useMemo(() => buildReminders(data.clients), [data.clients]);
@@ -210,6 +213,17 @@ export default function ClientsPage() {
     setImportReview(null);
   };
 
+  const closeView = () => { setViewClient(null); setCollectForm(null); };
+  const submitCollection = async () => {
+    if (!collectForm || !collectForm.amount || Number(collectForm.amount) <= 0) return;
+    await data.addCustody({
+      user_id: profile.id, user_name: profile.display_name, type: "تحصيل من عميل",
+      amount: Number(collectForm.amount), date: collectForm.date, client_id: viewClient.id,
+      client_name_manual: null, note: collectForm.note.trim(),
+    });
+    setCollectForm(null);
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -303,7 +317,7 @@ export default function ClientsPage() {
         {modal && <ClientForm initial={modal.client} onSave={saveClient} onCancel={() => setModal(null)} />}
       </Modal>
 
-      <Modal open={!!viewClient} onClose={() => setViewClient(null)} title={viewClient?.name || ""} wide>
+      <Modal open={!!viewClient} onClose={closeView} title={viewClient?.name || ""} wide>
         {viewClient && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
             {[
@@ -319,9 +333,11 @@ export default function ClientsPage() {
               </div>
             ))}
             {viewClient.notes && <div className="col-span-2 pt-2"><span className="text-slate-500 block mb-1">ملاحظات</span>{viewClient.notes}</div>}
-            {(viewClient.important_dates || []).length > 0 && (
-              <div className="col-span-2 pt-2">
-                <span className="text-slate-500 block mb-2">تواريخ هامة</span>
+            <div className="col-span-2 pt-2">
+              <span className="text-slate-500 block mb-2">تواريخ هامة</span>
+              {(viewClient.important_dates || []).length === 0 ? (
+                <p className="text-xs text-slate-400">لا يوجد تواريخ هامة مسجلة لهذا العميل.</p>
+              ) : (
                 <div className="flex flex-col gap-1.5">
                   {viewClient.important_dates.map((d, idx) => {
                     const diff = daysBetween(todayISO(), d.date);
@@ -336,26 +352,64 @@ export default function ClientsPage() {
                     );
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             {(() => {
-              const clientPayments = data.custody.filter((c) => c.type === "دفع" && c.client_id === viewClient.id);
-              const total = clientPayments.reduce((s, c) => s + Number(c.amount), 0);
-              if (clientPayments.length === 0) return null;
+              const entries = data.custody.filter((c) => (c.type === "دفع" || c.type === "تحصيل من عميل") && c.client_id === viewClient.id);
+              if (entries.length === 0 && !collectForm) return (
+                <div className="col-span-2 pt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-slate-500">حساب العهدة مع هذا العميل</span>
+                    <button onClick={() => setCollectForm({ amount: "", date: todayISO(), note: "" })}
+                      className="text-xs font-medium text-navy dark:text-[#e3c65a] hover:underline">+ تسجيل تحصيل من العميل</button>
+                  </div>
+                </div>
+              );
+              const paid = entries.filter((e) => e.type === "دفع").reduce((s, e) => s + Number(e.amount), 0);
+              const collected = entries.filter((e) => e.type === "تحصيل من عميل").reduce((s, e) => s + Number(e.amount), 0);
+              const net = paid - collected;
               return (
                 <div className="col-span-2 pt-2">
-                  <span className="text-slate-500 block mb-2">مدفوعات من العهدة لهذا العميل — إجمالي {fmtMoney(total)}</span>
-                  <div className="flex flex-col gap-1.5">
-                    {[...clientPayments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p) => (
-                      <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
-                        <span>{p.user_name}{p.note ? ` — ${p.note}` : ""}</span>
-                        <span className="flex items-center gap-2">
-                          <span className="text-slate-500">{fmtDate(p.date)}</span>
-                          <span className="font-semibold">{fmtMoney(p.amount)}</span>
-                        </span>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <span className="text-slate-500">
+                      حساب العهدة مع هذا العميل — المستحق حاليًا:{" "}
+                      <span className={`font-bold ${net > 0 ? "text-rose-600" : net < 0 ? "text-emerald-600" : "text-slate-600"}`}>{fmtMoney(net)}</span>
+                      {net < 0 && <span className="text-xs text-emerald-600"> (متحصّل زيادة)</span>}
+                    </span>
+                    {!collectForm && (
+                      <button onClick={() => setCollectForm({ amount: "", date: todayISO(), note: "" })}
+                        className="text-xs font-medium text-navy dark:text-[#e3c65a] hover:underline">+ تسجيل تحصيل من العميل</button>
+                    )}
                   </div>
+                  {collectForm && (
+                    <div className="bg-slate-50 dark:bg-slate-900/40 rounded-lg p-3 mb-3 flex flex-col gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input label="المبلغ المحصّل *" type="number" min="0" step="0.01" value={collectForm.amount} onChange={(e) => setCollectForm({ ...collectForm, amount: e.target.value })} />
+                        <Input label="التاريخ" type="date" value={collectForm.date} onChange={(e) => setCollectForm({ ...collectForm, date: e.target.value })} />
+                      </div>
+                      <Input label="ملاحظة (اختياري)" value={collectForm.note} onChange={(e) => setCollectForm({ ...collectForm, note: e.target.value })} />
+                      <div className="flex justify-end gap-2">
+                        <Btn variant="ghost" onClick={() => setCollectForm(null)}>إلغاء</Btn>
+                        <Btn onClick={submitCollection}>حفظ التحصيل</Btn>
+                      </div>
+                    </div>
+                  )}
+                  {entries.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      {[...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p) => (
+                        <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
+                          <span>
+                            <Badge color={p.type === "دفع" ? "red" : "green"}>{p.type === "دفع" ? "دفعة له" : "تحصيل منه"}</Badge>{" "}
+                            {p.user_name}{p.note ? ` — ${p.note}` : ""}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <span className="text-slate-500">{fmtDate(p.date)}</span>
+                            <span className="font-semibold">{fmtMoney(p.amount)}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })()}
