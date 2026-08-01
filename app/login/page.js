@@ -96,7 +96,7 @@ function WizardChoice({ options, onPick }) {
   return (
     <div className="flex flex-col gap-2 mt-4">
       {options.map((o) => (
-        <button key={o.label} onClick={() => onPick(o.value)}
+        <button key={o.label} onClick={() => onPick(o.value, o.label)}
           className="text-right bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold/60 rounded-xl px-4 py-3 text-sm text-slate-200 transition-colors">
           {o.label}
           {o.hint && <span className="block text-xs text-slate-400 mt-0.5">{o.hint}</span>}
@@ -112,10 +112,22 @@ function CompanyTypeWizard({ companyTypes }) {
   const [step, setStep] = useState(0); // 0 = بيانات أساسية، 1..n = أسئلة الترشيح
   const [info, setInfo] = useState(emptyAnswers);
   const [result, setResult] = useState(null);
+  const [path, setPath] = useState([]); // سجل كل سؤال اتجاوب عليه إيه، عشان يتحفظ مع الطلب
 
-  const restart = () => { setStep(0); setInfo(emptyAnswers); setResult(null); };
+  const restart = () => { setStep(0); setInfo(emptyAnswers); setResult(null); setPath([]); };
 
-  const finish = (typeName) => setResult(typeName);
+  const finish = (typeName, finalPath) => {
+    setResult(typeName);
+    const fullPath = finalPath || path;
+    supabase.from("company_wizard_leads").insert({
+      company_name: info.companyName || null,
+      activity: info.activity || null,
+      governorate: info.governorate || null,
+      phone: info.phone || null,
+      recommended_type: typeName,
+      answers_summary: fullPath.join(" ← "),
+    }).then(({ error }) => { if (error) console.error("lead save failed:", error.message); });
+  };
 
   if (result) {
     const typeInfo = companyTypes.find((c) => c.name === result);
@@ -194,7 +206,11 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم، فرع لشركة أجنبية", value: true },
             { label: "لا، شركة جديدة بالكامل داخل مصر", value: false },
           ]}
-          onPick={(v) => (v ? finish("فرع شركة أجنبية") : setStep(2))}
+          onPick={(v, label) => {
+            const updated = [...path, label];
+            setPath(updated);
+            if (v) finish("فرع شركة أجنبية", updated); else setStep(2);
+          }}
         />
       </WizardStep>
     );
@@ -210,8 +226,10 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "من 2 إلى 50 شريك", value: "few" },
             { label: "أكثر من 50، أو عايز أطرح أسهم الشركة للجمهور مستقبلًا", value: "many" },
           ]}
-          onPick={(v) => {
-            if (v === "many") finish("شركة مساهمة");
+          onPick={(v, label) => {
+            const updated = [...path, label];
+            setPath(updated);
+            if (v === "many") finish("شركة مساهمة", updated);
             else if (v === "one") setStep(3);
             else setStep(4);
           }}
@@ -229,7 +247,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم، عايز أحمي أموالي الشخصية", value: true },
             { label: "لا، مش فارق معايا", value: false },
           ]}
-          onPick={(v) => finish(v ? "شركة الشخص الواحد" : "منشأة فردية")}
+          onPick={(v, label) => finish(v ? "شركة الشخص الواحد" : "منشأة فردية", [...path, label])}
         />
       </WizardStep>
     );
@@ -244,7 +262,11 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم", value: true },
             { label: "لا", value: false },
           ]}
-          onPick={(v) => (v ? finish("شركة مساهمة") : setStep(5))}
+          onPick={(v, label) => {
+            const updated = [...path, label];
+            setPath(updated);
+            if (v) finish("شركة مساهمة", updated); else setStep(5);
+          }}
         />
       </WizardStep>
     );
@@ -259,7 +281,11 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم", value: true },
             { label: "لا، مش شرط", value: false },
           ]}
-          onPick={(v) => (v ? finish("شركة ذات مسئولية محدودة") : setStep(6))}
+          onPick={(v, label) => {
+            const updated = [...path, label];
+            setPath(updated);
+            if (v) finish("شركة ذات مسئولية محدودة", updated); else setStep(6);
+          }}
         />
       </WizardStep>
     );
@@ -274,7 +300,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم", value: true },
             { label: "لا، كل الشركاء هيديروا الشركة سوا", value: false },
           ]}
-          onPick={(v) => finish(v ? "شركة توصية بسيطة" : "شركة تضامن")}
+          onPick={(v, label) => finish(v ? "شركة توصية بسيطة" : "شركة تضامن", [...path, label])}
         />
       </WizardStep>
     );

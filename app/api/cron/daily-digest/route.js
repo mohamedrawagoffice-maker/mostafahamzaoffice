@@ -2,11 +2,14 @@ import { createClient } from "@supabase/supabase-js";
 import { notifyUsers } from "../../../../lib/serverNotify";
 import { buildReminders, generateAllDeclarations, daysBetween, todayISO } from "../../../../lib/helpers";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false } }
-);
+// بيتعمل جوه الدالة نفسها بدل المستوى الأعلى للملف، عشان مياخدش الموقع كله وقت البناء (build)
+// لو متغيرات البيئة لسه مش متظبطة في Vercel
+function getSupabaseAdmin() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+}
 
 // بيتنادى مرة كل يوم (عن طريق Vercel Cron) وبيبعت ملخص واحد للمدير/الأدمن
 // فيه: تواريخ هامة للعملاء قربت/اتأخرت، ومبالغ إقرارات مستحقة قربت/اتأخرت
@@ -15,6 +18,9 @@ export async function GET(req) {
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) return Response.json({ error: "الإشعارات مش متظبطة بعد (متغيرات البيئة ناقصة)" }, { status: 503 });
 
   try {
     const [{ data: clients }, { data: declarationStatusRows }, { data: managers }] = await Promise.all([

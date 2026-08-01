@@ -3,17 +3,19 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Wallet, BarChart3, ClipboardCheck, ListTodo, CalendarDays,
-  Settings as SettingsIcon, Sun, Moon, LogOut, Menu, HandCoins, Bell, BellOff,
+  Settings as SettingsIcon, Sun, Moon, LogOut, Menu, HandCoins, Bell, BellOff, Building2,
 } from "lucide-react";
 import { useAuth } from "../../lib/AuthContext";
 import { DataProvider, useData } from "../../lib/DataContext";
 import { TABS_FULL, defaultRouteForRole } from "../../lib/constants";
 import { buildReminders } from "../../lib/helpers";
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "../../lib/pushClient";
+import NotificationBell from "../../components/NotificationBell";
 
 const ICONS = {
   dashboard: LayoutDashboard, clients: Users, invoices: FileText, expenses: Wallet,
-  reports: BarChart3, declarations: ClipboardCheck, tasks: ListTodo, leaves: CalendarDays, custody: HandCoins, settings: SettingsIcon,
+  reports: BarChart3, declarations: ClipboardCheck, tasks: ListTodo, leaves: CalendarDays, custody: HandCoins,
+  "company-leads": Building2, settings: SettingsIcon,
 };
 
 function Shell({ children }) {
@@ -113,10 +115,13 @@ function Shell({ children }) {
       {sidebarOpen && <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="no-print sticky top-0 z-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between md:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-2"><Menu size={20} /></button>
-          <span className="font-bold text-sm">مكتب الأستاذ مصطفى حمزة</span>
-          <div className="w-8" />
+        <header className="no-print sticky top-0 z-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 md:hidden"><Menu size={20} /></button>
+          <span className="font-bold text-sm md:hidden">مكتب الأستاذ مصطفى حمزة</span>
+          <div className="flex-1 hidden md:block" />
+          <div className="[&_button]:text-slate-700 dark:[&_button]:text-slate-200 [&_button:hover]:bg-slate-100 dark:[&_button:hover]:bg-white/10">
+            <NotificationBell userId={profile?.id} />
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto">
           {data?.error && <div className="mb-4 bg-rose-50 dark:bg-rose-900/30 text-rose-600 text-sm px-3 py-2 rounded-lg">{data.error}</div>}
