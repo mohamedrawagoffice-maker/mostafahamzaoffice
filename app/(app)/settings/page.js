@@ -7,6 +7,24 @@ import { DEFAULT_PUBLIC_PAGE } from "../../../lib/constants";
 
 const MAX_LOGO_BYTES = 400 * 1024; // 400KB — بتتخزن كنص داخل قاعدة البيانات، فلازم تفضل خفيفة
 
+function NotifyEmailRow({ profile, onSave }) {
+  const [value, setValue] = useState(profile.notify_email || "");
+  const [saved, setSaved] = useState(false);
+  const save = () => {
+    if (value === (profile.notify_email || "")) return;
+    onSave(value.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm w-32 shrink-0 font-medium">{profile.display_name}</span>
+      <Input dir="ltr" placeholder="example@email.com" value={value} onChange={(e) => setValue(e.target.value)} onBlur={save} className="flex-1" />
+      {saved && <span className="text-emerald-600 text-xs shrink-0">تم ✓</span>}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const data = useData();
   const [newCat, setNewCat] = useState("");
@@ -190,6 +208,17 @@ export default function SettingsPage() {
             <Btn className="self-start mt-3" onClick={savePage}>حفظ محتوى صفحة الدخول</Btn>
             {pageSaved && <span className="text-emerald-600 text-xs mt-3">تم الحفظ ✓</span>}
           </div>
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="font-bold mb-1 text-slate-800 dark:text-slate-100">الإشعارات (إيميل + Push)</h3>
+        <p className="text-xs text-slate-400 mb-3">
+          حدد إيميل كل شخص عشان توصله الإشعارات عليه (المهام، حركات العهدة، مواعيد الإقرارات والتواريخ الهامة).
+          كل شخص لازم كمان يدخل بحسابه هو ويدوس على "فعّل الإشعارات" من القائمة الجانبية عشان يفعّل الإشعارات على جهازه.
+        </p>
+        <div className="flex flex-col gap-2">
+          {data.profiles.map((p) => <NotifyEmailRow key={p.id} profile={p} onSave={(email) => data.updateProfile(p.id, { notify_email: email })} />)}
         </div>
       </Card>
 

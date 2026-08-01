@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Wallet, BarChart3, ClipboardCheck, ListTodo, CalendarDays,
-  Settings as SettingsIcon, Sun, Moon, LogOut, Menu, HandCoins,
+  Settings as SettingsIcon, Sun, Moon, LogOut, Menu, HandCoins, Bell, BellOff,
 } from "lucide-react";
 import { useAuth } from "../../lib/AuthContext";
 import { DataProvider, useData } from "../../lib/DataContext";
 import { TABS_FULL, defaultRouteForRole } from "../../lib/constants";
 import { buildReminders } from "../../lib/helpers";
+import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "../../lib/pushClient";
 
 const ICONS = {
   dashboard: LayoutDashboard, clients: Users, invoices: FileText, expenses: Wallet,
@@ -22,10 +23,35 @@ function Shell({ children }) {
   const pathname = usePathname();
   const [dark, setDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pushStatus, setPushStatus] = useState("checking"); // checking | unsupported | subscribed | not-subscribed
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
+
+  useEffect(() => {
+    if (!isPushSupported()) { setPushStatus("unsupported"); return; }
+    getPushSubscription().then((sub) => setPushStatus(sub ? "subscribed" : "not-subscribed")).catch(() => setPushStatus("not-subscribed"));
+  }, []);
+
+  const togglePush = async () => {
+    if (!profile || pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (pushStatus === "subscribed") {
+        await unsubscribeFromPush();
+        setPushStatus("not-subscribed");
+      } else {
+        await subscribeToPush(profile.id);
+        setPushStatus("subscribed");
+      }
+    } catch (e) {
+      alert(e.message || "حصل خطأ في تفعيل الإشعارات");
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!profile) return;
@@ -69,6 +95,12 @@ function Shell({ children }) {
           })}
         </nav>
         <div className="p-3 border-t border-white/10 flex flex-col gap-1">
+          {pushStatus !== "unsupported" && (
+            <button onClick={togglePush} disabled={pushBusy} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50">
+              {pushStatus === "subscribed" ? <BellOff size={17} /> : <Bell size={17} />}
+              {pushBusy ? "جاري التحديث..." : pushStatus === "subscribed" ? "إيقاف الإشعارات" : "فعّل الإشعارات"}
+            </button>
+          )}
           <button onClick={() => setDark((d) => !d)} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm text-slate-200 hover:bg-white/10">
             {dark ? <Sun size={17} /> : <Moon size={17} />} {dark ? "الوضع الفاتح" : "الوضع الداكن"}
           </button>
