@@ -125,7 +125,7 @@ function CompanyTypeWizard({ companyTypes }) {
       governorate: info.governorate || null,
       phone: info.phone || null,
       recommended_type: typeName,
-      answers_summary: fullPath.join(" ← "),
+      answers_summary: fullPath.map((e) => `${e.q}: ${e.a}`).join("\n"),
     }).then(({ error }) => { if (error) console.error("lead save failed:", error.message); });
   };
 
@@ -207,7 +207,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "لا، شركة جديدة بالكامل داخل مصر", value: false },
           ]}
           onPick={(v, label) => {
-            const updated = [...path, label];
+            const updated = [...path, { q: "فرع لشركة أجنبية؟", a: label }];
             setPath(updated);
             if (v) finish("فرع شركة أجنبية", updated); else setStep(2);
           }}
@@ -227,7 +227,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "أكثر من 50، أو عايز أطرح أسهم الشركة للجمهور مستقبلًا", value: "many" },
           ]}
           onPick={(v, label) => {
-            const updated = [...path, label];
+            const updated = [...path, { q: "عدد الشركاء", a: label }];
             setPath(updated);
             if (v === "many") finish("شركة مساهمة", updated);
             else if (v === "one") setStep(3);
@@ -247,7 +247,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم، عايز أحمي أموالي الشخصية", value: true },
             { label: "لا، مش فارق معايا", value: false },
           ]}
-          onPick={(v, label) => finish(v ? "شركة الشخص الواحد" : "منشأة فردية", [...path, label])}
+          onPick={(v, label) => finish(v ? "شركة الشخص الواحد" : "منشأة فردية", [...path, { q: "عايز مسؤولية محدودة؟", a: label }])}
         />
       </WizardStep>
     );
@@ -263,7 +263,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "لا", value: false },
           ]}
           onPick={(v, label) => {
-            const updated = [...path, label];
+            const updated = [...path, { q: "عايزين طرح أسهم؟", a: label }];
             setPath(updated);
             if (v) finish("شركة مساهمة", updated); else setStep(5);
           }}
@@ -282,7 +282,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "لا، مش شرط", value: false },
           ]}
           onPick={(v, label) => {
-            const updated = [...path, label];
+            const updated = [...path, { q: "عايزين مسؤولية محدودة لكل شريك؟", a: label }];
             setPath(updated);
             if (v) finish("شركة ذات مسئولية محدودة", updated); else setStep(6);
           }}
@@ -300,7 +300,7 @@ function CompanyTypeWizard({ companyTypes }) {
             { label: "نعم", value: true },
             { label: "لا، كل الشركاء هيديروا الشركة سوا", value: false },
           ]}
-          onPick={(v, label) => finish(v ? "شركة توصية بسيطة" : "شركة تضامن", [...path, label])}
+          onPick={(v, label) => finish(v ? "شركة توصية بسيطة" : "شركة تضامن", [...path, { q: "يوجد شريك موصٍ لا يدير؟", a: label }])}
         />
       </WizardStep>
     );

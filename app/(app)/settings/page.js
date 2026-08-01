@@ -10,9 +10,16 @@ const MAX_LOGO_BYTES = 400 * 1024; // 400KB — بتتخزن كنص داخل ق�
 function NotifyEmailRow({ profile, onSave }) {
   const [value, setValue] = useState(profile.notify_email || "");
   const [saved, setSaved] = useState(false);
-  const save = () => {
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
     if (value === (profile.notify_email || "")) return;
-    onSave(value.trim());
+    setSaving(true);
+    const result = await onSave(value.trim());
+    setSaving(false);
+    if (result === null) {
+      alert(`حصل خطأ ولم يتم حفظ الإيميل لـ ${profile.display_name}. جرب تاني أو تأكد إنك شغّلت ملف supabase/add_notifications.sql`);
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   };

@@ -61,9 +61,18 @@ export default function CompanyLeadsPage() {
                     {l.phone && <span className="flex items-center gap-1" dir="ltr"><Phone size={12} /> {l.phone}</span>}
                   </div>
                   {l.answers_summary && (
-                    <p className="text-xs bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300">
-                      {l.answers_summary}
-                    </p>
+                    <div className="text-xs bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-600 dark:text-slate-300 flex flex-col gap-1">
+                      {l.answers_summary.split("\n").map((line, idx) => {
+                        const [q, ...rest] = line.split(":");
+                        const a = rest.join(":").trim();
+                        return (
+                          <div key={idx} className="flex flex-wrap gap-1">
+                            <span className="text-slate-400">{q}:</span>
+                            <span className="font-medium text-slate-700 dark:text-slate-200">{a}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
                 <button onClick={() => remove(l.id)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/30 text-rose-500 rounded-lg shrink-0" title="حذف">
