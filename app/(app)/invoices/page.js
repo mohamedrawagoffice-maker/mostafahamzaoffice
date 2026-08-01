@@ -6,7 +6,7 @@ import { useData } from "../../../lib/DataContext";
 import { Card, Btn, Input, Select, TextArea, Badge, Modal, SortableTh } from "../../../components/ui";
 import { fmtDate, fmtMoney, sortRows, todayISO } from "../../../lib/helpers";
 
-const emptyForm = () => ({ client_id: "", amount: "", status: "معلقة", description: "", date: todayISO() });
+const emptyForm = () => ({ client_id: "", amount: "", status: "معلقة", payment_method: "", description: "", date: todayISO() });
 
 export default function InvoicesPage() {
   const { profile } = useAuth();
@@ -31,16 +31,18 @@ export default function InvoicesPage() {
 
   const openAdd = () => { setForm(emptyForm()); setModal({ mode: "add" }); };
   const openEdit = (inv) => {
-    setForm({ client_id: inv.client_id, amount: inv.amount, status: inv.status, description: inv.description || "", date: inv.date });
+    setForm({ client_id: inv.client_id, amount: inv.amount, status: inv.status, payment_method: inv.payment_method || "", description: inv.description || "", date: inv.date });
     setModal({ mode: "edit", invoice: inv });
   };
 
   const save = async () => {
     if (!form.client_id || !form.amount) return;
+    if (form.status !== "معلقة" && !form.payment_method) return; // لازم تحدد طريقة الدفع لو الفاتورة مدفوعة
+    const payload = { ...form, amount: Number(form.amount), payment_method: form.status === "معلقة" ? null : form.payment_method };
     if (modal.mode === "add") {
-      await data.addInvoice({ ...form, amount: Number(form.amount) });
+      await data.addInvoice(payload);
     } else {
-      await data.updateInvoice(modal.invoice.id, { ...form, amount: Number(form.amount) });
+      await data.updateInvoice(modal.invoice.id, payload);
     }
     setModal(null);
   };
@@ -50,7 +52,7 @@ export default function InvoicesPage() {
     await data.deleteInvoice(inv);
   };
 
-  const statusColor = (s) => (s === "مدفوعة" ? "green" : s === "جزئي" ? "blue" : "amber");
+  const statusColor = (s) => (s === "مدفوعة" ? "green" : "amber");
 
   return (
     <div className="flex flex-col gap-5">
@@ -80,6 +82,7 @@ export default function InvoicesPage() {
               <th className="px-3 py-2 text-right">العميل</th>
               <SortableTh label="المبلغ" sortKey="amount" sort={sort} setSort={setSort} />
               <SortableTh label="الحالة" sortKey="status" sort={sort} setSort={setSort} />
+              <th className="px-3 py-2 text-right">طريقة الدفع</th>
               <th className="px-3 py-2 text-right">وصف الخدمة</th>
               <th className="px-3 py-2 text-right"></th>
             </tr>
@@ -91,6 +94,7 @@ export default function InvoicesPage() {
                 <td className="px-3 py-2 font-medium">{clientName(i.client_id)}</td>
                 <td className="px-3 py-2">{fmtMoney(i.amount)}</td>
                 <td className="px-3 py-2"><Badge color={statusColor(i.status)}>{i.status}</Badge></td>
+                <td className="px-3 py-2 text-slate-500 text-xs">{i.payment_method === "عهدة شخصية" ? "عهدة شخصية" : i.payment_method === "كارت مصطفى مباشر" ? "كارت أ/مصطفى" : "—"}</td>
                 <td className="px-3 py-2 text-slate-500">{i.description}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-1">
@@ -100,7 +104,7 @@ export default function InvoicesPage() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-400">لا يوجد فواتير</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-slate-400">لا يوجد فواتير</td></tr>}
           </tbody>
         </table>
       </Card>
@@ -113,8 +117,15 @@ export default function InvoicesPage() {
           </Select>
           <Input label="المبلغ *" type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           <Select label="الحالة" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-            <option value="معلقة">معلقة</option><option value="جزئي">جزئي</option><option value="مدفوعة">مدفوعة</option>
+            <option value="معلقة">معلقة</option><option value="مدفوعة">مدفوعة</option>
           </Select>
+          {form.status !== "معلقة" && (
+            <Select label="طريقة الدفع *" value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })}>
+              <option value="">اختر طريقة الدفع</option>
+              <option value="عهدة شخصية">من العهدة الشخصية</option>
+              <option value="كارت مصطفى مباشر">من كارت أ/ مصطفى مباشر</option>
+            </Select>
+          )}
           <Input label="التاريخ" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           <TextArea label="وصف الخدمة" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
           <div className="flex justify-end gap-2 pt-2"><Btn variant="ghost" onClick={() => setModal(null)}>إلغاء</Btn><Btn onClick={save}>حفظ</Btn></div>

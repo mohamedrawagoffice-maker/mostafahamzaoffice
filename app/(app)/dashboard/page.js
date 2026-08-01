@@ -100,7 +100,7 @@ export default function DashboardPage() {
       columns: [
         { header: "العميل", render: (i) => clientName(i.client_id), filterable: true, value: (i) => clientName(i.client_id) },
         { header: "المبلغ", render: (i) => fmtMoney(i.amount) },
-        { header: "الحالة", render: (i) => <Badge color={i.status === "مدفوعة" ? "green" : i.status === "جزئي" ? "blue" : "amber"}>{i.status}</Badge>, filterable: true, value: (i) => i.status },
+        { header: "الحالة", render: (i) => <Badge color={i.status === "مدفوعة" ? "green" : "amber"}>{i.status}</Badge>, filterable: true, value: (i) => i.status },
         { header: "التاريخ", render: (i) => fmtDate(i.date) },
       ],
     },
@@ -123,7 +123,7 @@ export default function DashboardPage() {
       columns: [
         { header: "العميل", render: (i) => clientName(i.client_id), filterable: true, value: (i) => clientName(i.client_id) },
         { header: "المبلغ", render: (i) => fmtMoney(i.amount) },
-        { header: "الحالة", render: (i) => <Badge color={i.status === "جزئي" ? "blue" : "amber"}>{i.status}</Badge>, filterable: true, value: (i) => i.status },
+        { header: "الحالة", render: (i) => <Badge color="amber">{i.status}</Badge>, filterable: true, value: (i) => i.status },
         { header: "التاريخ", render: (i) => fmtDate(i.date) },
       ],
     },

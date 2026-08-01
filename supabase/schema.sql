@@ -42,7 +42,7 @@ create table if not exists invoices (
   id uuid primary key default gen_random_uuid(),
   client_id uuid references clients(id) on delete cascade,
   amount numeric not null default 0,
-  status text default 'معلقة' check (status in ('معلقة','جزئي','مدفوعة')),
+  status text default 'معلقة' check (status in ('معلقة','مدفوعة')),
   description text,
   date date default current_date,
   created_by text,
