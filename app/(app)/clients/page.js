@@ -401,18 +401,22 @@ export default function ClientsPage() {
                   )}
                   {entries.length > 0 && (
                     <div className="flex flex-col gap-1.5">
-                      {[...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p) => (
-                        <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
-                          <span>
-                            <Badge color={p.type === "دفع" ? "red" : "green"}>{p.type === "دفع" ? "دفعة له" : "تحصيل منه"}</Badge>{" "}
-                            {p.user_name}{p.note ? ` — ${p.note}` : ""}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <span className="text-slate-500">{fmtDate(p.date)}</span>
-                            <span className="font-semibold">{fmtMoney(p.amount)}</span>
-                          </span>
-                        </div>
-                      ))}
+                      {[...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p) => {
+                        const isMe = p.user_id === profile.id;
+                        return (
+                          <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
+                            <span>
+                              <Badge color={p.type === "دفع" ? "red" : "green"}>{p.type === "دفع" ? "دفعة له" : "تحصيل منه"}</Badge>{" "}
+                              بواسطة <span className={isMe ? "font-bold text-navy dark:text-[#e3c65a]" : "font-semibold"}>{isMe ? "أنت" : p.user_name}</span>
+                              {p.note ? ` — ${p.note}` : ""}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <span className="text-slate-500">{fmtDate(p.date)}</span>
+                              <span className="font-semibold">{fmtMoney(p.amount)}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
