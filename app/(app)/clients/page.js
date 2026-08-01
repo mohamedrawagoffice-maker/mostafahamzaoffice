@@ -5,7 +5,7 @@ import { Bell, Search, Download, Upload, Plus, Edit2, Trash2, Paperclip, X } fro
 import { useData } from "../../../lib/DataContext";
 import { useAuth } from "../../../lib/AuthContext";
 import { Card, Btn, Input, Select, TextArea, Badge, Modal, CopyableCell, SortableTh } from "../../../components/ui";
-import { fmtDate, fmtMoney, buildReminders, sortRows, excelToISODate, daysBetween, todayISO } from "../../../lib/helpers";
+import { fmtDate, fmtMoney, buildReminders, sortRows, excelToISODate, daysBetween, todayISO, generateAllDeclarations, declarationRemaining } from "../../../lib/helpers";
 import { IMPORTANT_DATE_TYPES } from "../../../lib/constants";
 
 const emptyClient = () => ({
@@ -119,6 +119,11 @@ export default function ClientsPage() {
   const importRef = useRef();
 
   const reminders = useMemo(() => buildReminders(data.clients), [data.clients]);
+  const clientDueDeclarations = useMemo(() => {
+    if (!viewClient) return [];
+    return generateAllDeclarations(data.clients, data.declarationStatus)
+      .filter((d) => d.clientId === viewClient.id && declarationRemaining(d) > 0);
+  }, [viewClient, data.clients, data.declarationStatus]);
   const filtered = data.clients.filter((c) =>
     [c.name, c.tax_number, c.national_id, c.phone, c.email].some((f) => (f || "").toLowerCase().includes(query.toLowerCase()))
   );
@@ -343,6 +348,28 @@ export default function ClientsPage() {
               </div>
             ))}
             {viewClient.notes && <div className="col-span-2 pt-2"><span className="text-slate-500 block mb-1">ملاحظات</span>{viewClient.notes}</div>}
+            <div className="col-span-2 pt-2">
+              <span className="text-slate-500 block mb-2">مبالغ إقرارات مستحقة</span>
+              {clientDueDeclarations.length === 0 ? (
+                <p className="text-xs text-slate-400">لا يوجد مبالغ إقرارات مستحقة على هذا العميل حاليًا.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {clientDueDeclarations.map((d) => (
+                    <div key={d.key} className="flex items-center justify-between bg-rose-50 dark:bg-rose-900/20 rounded-lg px-2.5 py-1.5">
+                      <span>{d.type} — {d.period}</span>
+                      <span className="flex items-center gap-2">
+                        <Badge color={d.status === "متأخر" ? "red" : "amber"}>{d.status}</Badge>
+                        <span className="font-bold text-rose-600">{fmtMoney(declarationRemaining(d))}</span>
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between px-2.5 pt-1 text-xs">
+                    <span className="text-slate-500">إجمالي المستحق</span>
+                    <span className="font-bold text-rose-600">{fmtMoney(clientDueDeclarations.reduce((s, d) => s + declarationRemaining(d), 0))}</span>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="col-span-2 pt-2">
               <span className="text-slate-500 block mb-2">تواريخ هامة</span>
               {(() => {
