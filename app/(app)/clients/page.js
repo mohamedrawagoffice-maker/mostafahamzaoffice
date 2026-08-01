@@ -63,15 +63,25 @@ function ClientForm({ initial, onSave, onCancel }) {
           <Btn variant="subtle" onClick={addImportantDate}><Plus size={14} /> إضافة تاريخ</Btn>
         </div>
         <div className="flex flex-col gap-2">
-          {(c.important_dates || []).map((d, idx) => (
-            <div key={idx} className="flex gap-2 items-center">
-              <Select value={d.type} onChange={(e) => updateImportantDate(idx, "type", e.target.value)} className="flex-1">
-                {IMPORTANT_DATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </Select>
-              <Input type="date" value={d.date} onChange={(e) => updateImportantDate(idx, "date", e.target.value)} className="flex-1" />
-              <button onClick={() => removeImportantDate(idx)} className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={16} /></button>
-            </div>
-          ))}
+          {(c.important_dates || []).map((d, idx) => {
+            const isCustom = !IMPORTANT_DATE_TYPES.includes(d.type);
+            return (
+              <div key={idx} className="flex gap-2 items-center">
+                <Select
+                  value={isCustom ? "أخرى" : d.type}
+                  onChange={(e) => updateImportantDate(idx, "type", e.target.value === "أخرى" ? "" : e.target.value)}
+                  className="flex-1">
+                  {IMPORTANT_DATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  <option value="أخرى">أخرى (اكتب بنفسك)</option>
+                </Select>
+                {isCustom && (
+                  <Input value={d.type} onChange={(e) => updateImportantDate(idx, "type", e.target.value)} placeholder="اكتب نوع التاريخ" className="flex-1" />
+                )}
+                <Input type="date" value={d.date} onChange={(e) => updateImportantDate(idx, "date", e.target.value)} className="flex-1" />
+                <button onClick={() => removeImportantDate(idx)} className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={16} /></button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
