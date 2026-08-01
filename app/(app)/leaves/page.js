@@ -4,7 +4,7 @@ import { Plus, Trash2, CalendarDays, CheckCircle2, AlertTriangle } from "lucide-
 import { useAuth } from "../../../lib/AuthContext";
 import { useData } from "../../../lib/DataContext";
 import { Card, Btn, Input, TextArea, Select, Badge, Modal } from "../../../components/ui";
-import { fmtDate, todayISO } from "../../../lib/helpers";
+import { fmtDate, todayISO, summarizeLeaveYear } from "../../../lib/helpers";
 import { LEAVE_ANNUAL_PAID_DAYS } from "../../../lib/constants";
 
 function LeaveNote({ leave, canEdit, onSave }) {
@@ -36,23 +36,6 @@ function LeaveNote({ leave, canEdit, onSave }) {
   );
 }
 
-// بيحسب لكل شخص: أول 15 يوم في السنة (بترتيب التاريخ) = براتب كامل، وأي يوم بعدها = خصم من الراتب
-function summarizeYear(leaves, userId, year) {
-  const rows = leaves
-    .filter((l) => l.user_id === userId && new Date(l.date).getFullYear() === year)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  const paid = rows.slice(0, LEAVE_ANNUAL_PAID_DAYS);
-  const unpaid = rows.slice(LEAVE_ANNUAL_PAID_DAYS);
-  const paidIds = new Set(paid.map((r) => r.id));
-  return {
-    total: rows.length,
-    paidCount: paid.length,
-    unpaidCount: unpaid.length,
-    remaining: Math.max(0, LEAVE_ANNUAL_PAID_DAYS - paid.length),
-    isPaid: (id) => paidIds.has(id),
-  };
-}
-
 export default function LeavesPage() {
   const { profile } = useAuth();
   const data = useData();
@@ -80,7 +63,7 @@ export default function LeavesPage() {
   const sorted = [...visibleLeaves].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const summaryUserId = isAdminLike ? (personFilter !== "all" ? personFilter : null) : profile.id;
-  const summary = summaryUserId ? summarizeYear(data.leaves, summaryUserId, year) : null;
+  const summary = summaryUserId ? summarizeLeaveYear(data.leaves, summaryUserId, year, LEAVE_ANNUAL_PAID_DAYS) : null;
 
   const openAdd = () => {
     setForm({ user_id: personFilter !== "all" ? personFilter : "", date: todayISO(), note: "" });
@@ -150,7 +133,7 @@ export default function LeavesPage() {
 
       <div className="flex flex-col gap-3">
         {sorted.map((l) => {
-          const isPaid = summarizeYear(data.leaves, l.user_id, year).isPaid(l.id);
+          const isPaid = summarizeLeaveYear(data.leaves, l.user_id, year, LEAVE_ANNUAL_PAID_DAYS).isPaid(l.id);
           return (
             <Card key={l.id} className="p-4">
               <div className="flex items-start justify-between gap-3 flex-wrap">
