@@ -403,12 +403,14 @@ export default function ClientsPage() {
                     <div className="flex flex-col gap-1.5">
                       {[...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((p) => {
                         const isMe = p.user_id === profile.id;
+                        const recordedByOther = p.created_by && p.created_by !== p.user_name;
                         return (
                           <div key={p.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg px-2.5 py-1.5">
                             <span>
                               <Badge color={p.type === "دفع" ? "red" : "green"}>{p.type === "دفع" ? "دفعة له" : "تحصيل منه"}</Badge>{" "}
                               بواسطة <span className={isMe ? "font-bold text-navy dark:text-[#e3c65a]" : "font-semibold"}>{isMe ? "أنت" : p.user_name}</span>
                               {p.note ? ` — ${p.note}` : ""}
+                              {recordedByOther && <span className="block text-[11px] text-slate-400 mt-0.5">سجّلها: {p.created_by}</span>}
                             </span>
                             <span className="flex items-center gap-2">
                               <span className="text-slate-500">{fmtDate(p.date)}</span>
