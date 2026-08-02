@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, FileText, Wallet, BarChart3, ClipboardCheck, ListTodo, CalendarDays,
@@ -66,7 +66,7 @@ function Shell({ children }) {
 
   const tabs = TABS_FULL.filter((t) => t.roles.includes(profile.role));
   const activeKey = pathname.split("/")[1] || "dashboard";
-  const reminders = data?.clients ? buildReminders(data.clients) : [];
+  const reminders = useMemo(() => (data?.clients ? buildReminders(data.clients) : []), [data?.clients]);
   // data.tasks بالنسبة للمحاسب/المتدرب أصلاً مقصورة بصلاحيات قاعدة البيانات على مهامه هو بس (المرسلة له أو منه)
   const tasksBadge = data?.tasks ? data.tasks.filter((t) => t.status !== "معتمد التنفيذ").length : 0;
 

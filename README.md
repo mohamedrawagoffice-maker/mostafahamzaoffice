@@ -2,6 +2,14 @@
 
 تطبيق Next.js متصل بـ Supabase (قاعدة بيانات + مصادقة) وجاهز للنشر على Vercel.
 
+> **ملاحظة:** كل ملفات SQL التاريخية (add_*.sql, fix_*.sql, remove_*.sql) اللي كانت
+> بتتضاف مع كل ميزة جديدة، بقت كلها **مدموجة داخل `supabase/schema.sql`** في نسخة
+> واحدة نهائية ومحدّثة، ومصمّمة تشتغل بأمان لأي عدد مرات (idempotent) — سواء على
+> مشروع Supabase جديد تمامًا، أو تشغيله تاني فوق مشروع قائم من غير أي مشاكل تعارض.
+> يعني مشروع Supabase جديد محتاج بس ملفين: `schema.sql` و `indexes.sql`.
+> أسماء الملفات القديمة المذكورة في السجل التاريخي تحت دي للسياق بس، مش موجودة
+> في المشروع دلوقتي.
+
 ## خطوات النشر بالترتيب
 
 ### 1) إنشاء مشروع Supabase
@@ -15,7 +23,7 @@
 ### 2) تشغيل السكيما (الجداول + الصلاحيات)
 1. من Supabase Dashboard افتح `SQL Editor`.
 2. افتح ملف `supabase/schema.sql` من هذا المشروع، انسخ كل المحتوى، الصقه في SQL Editor، واضغط Run.
-   - ده هيعمل الجداول كلها (clients, invoices, expenses, tasks, activity_log, declaration_status, settings, profiles) ويفعّل الحماية (Row Level Security) حسب الأدوار.
+   - ده هيعمل كل الجداول (clients, invoices, expenses, tasks, activity_log, declaration_status, settings, profiles, leaves, custody, push_subscriptions, notifications, company_wizard_leads) ويفعّل الحماية (Row Level Security) حسب الأدوار.
 3. بنفس الطريقة، شغّل ملف `supabase/indexes.sql` كمان (لتسريع الاستعلامات).
 
 ### 3) تجهيز المشروع محليًا
@@ -49,10 +57,20 @@ git commit -m "أول نسخة من نظام المكتب"
 ### 7) النشر على Vercel
 1. روح على https://vercel.com وسجّل دخول (يفضّل بحساب GitHub).
 2. اضغط "Add New Project" واختار المستودع اللي رفعته.
-3. في خطوة الإعدادات (Environment Variables) ضيف:
+3. في خطوة الإعدادات (Environment Variables) ضيف المتغيرات دي كلها:
+
+**أساسية (لازم للموقع يشتغل خالص):**
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - **لا تضيف** `SUPABASE_SERVICE_ROLE_KEY` هنا — هو مطلوب محليًا بس لسكريبت seed-users.
+   - `SUPABASE_SERVICE_ROLE_KEY` — من `Project Settings > API > service_role` في Supabase. آمن تمامًا في Vercel لأنه بيتستخدم بس جوه كود السيرفر (API routes)، ومبيوصلش للمتصفح خالص. **لا تحطه في أي مكان تاني.**
+
+**اختيارية (لتفعيل الإشعارات — الموقع بيشتغل عادي من غيرها، بس الإشعارات مش هتوصل):**
+   - `GMAIL_USER` — إيميل Gmail اللي هيبعت منه الإشعارات (مثلاً `mohamedrawagoffice@gmail.com`)
+   - `GMAIL_APP_PASSWORD` — App Password (16 حرف) من `myaccount.google.com/apppasswords` — لازم تفعّل "التحقق بخطوتين" على الحساب الأول. **مش باسورد Gmail العادي.**
+   - `VAPID_PUBLIC_KEY` و `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (نفس القيمة بالظبط) و `VAPID_PRIVATE_KEY` — لإشعارات الـ Push على المتصفح/الموبايل. تتولّد مرة واحدة بس (اسأل Claude يولّدها لو محتاجها من الأول).
+   - `VAPID_SUBJECT` — بصيغة `mailto:إيميلك@مثال.com`
+   - `CRON_SECRET` — أي نص عشوائي طويل، بيحمي مسار الفحص اليومي التلقائي (`/api/cron/daily-digest`) من إنه يتنادى من غير Vercel نفسه.
+
 4. اضغط Deploy، واستنى دقيقة لحد ما ياخد لينك زي `your-project.vercel.app`.
 
 بكده الموقع شغال أونلاين ومتصل بقاعدة بيانات حقيقية، وأي حد من الثمانية يقدر يدخل من أي جهاز.

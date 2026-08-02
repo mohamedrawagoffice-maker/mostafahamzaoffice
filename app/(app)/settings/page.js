@@ -17,7 +17,7 @@ function NotifyEmailRow({ profile, onSave }) {
     const result = await onSave(value.trim());
     setSaving(false);
     if (result === null) {
-      alert(`حصل خطأ ولم يتم حفظ الإيميل لـ ${profile.display_name}. جرب تاني أو تأكد إنك شغّلت ملف supabase/add_notifications.sql`);
+      alert(`حصل خطأ ولم يتم حفظ الإيميل لـ ${profile.display_name}. جرب تاني أو تأكد إنك شغّلت آخر نسخة من ملف supabase/schema.sql`);
       return;
     }
     setSaved(true);
